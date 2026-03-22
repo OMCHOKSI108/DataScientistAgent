@@ -13,6 +13,20 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class CacheMiddleware(BaseHTTPMiddleware):
+    """Add cache headers for static assets."""
+
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+
+        # Cache static assets for 1 hour
+        if request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "public, max-age=3600"
+            response.headers["ETag"] = f'"{hash(request.url.path)}"'
+
+        return response
 
 from backend.config import get_settings
 from backend.logging_config import setup_logging
@@ -36,6 +50,7 @@ app = FastAPI(
 # ── Middleware ──────────────────────────────────────────────
 # Add request tracking middleware (should be added last for proper ordering)
 app.add_middleware(RequestTrackingMiddleware)
+app.add_middleware(CacheMiddleware)
 
 # ── CORS (restrictive for security) ─────────────────────
 app.add_middleware(
