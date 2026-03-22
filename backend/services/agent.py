@@ -50,7 +50,20 @@ def _build_system_prompt(file_context: dict = None) -> str:
 
 def _coerce_output_to_str(output) -> str:
     if isinstance(output, str):
-        return output if output.strip() else "I processed your request but didn't generate visible output."
+        cleaned = output.strip()
+        if not cleaned:
+            return "I processed your request but didn't generate visible output."
+
+        # Strip common ReAct parser artifacts that can leak into user responses.
+        if "Invalid Format:" in cleaned:
+            cleaned = cleaned.split("Invalid Format:", 1)[0].strip()
+
+        cleaned = cleaned.replace("**Final Answer**", "").strip()
+
+        if "Final Answer:" in cleaned:
+            cleaned = cleaned.split("Final Answer:", 1)[1].strip()
+
+        return cleaned or "There was an issue generating the response. Please try again."
     if isinstance(output, dict):
         return str(output.get("output", output))
     return str(output)
@@ -69,10 +82,31 @@ def _maybe_answer_from_file_context(user_message: str, file_context: dict | None
         columns = file_context.get("columns")
         column_names = file_context.get("column_names") or []
 
-        asks_columns = any(k in message for k in ["how many columns", "number of columns", "total columns", "columns count"])
+        asks_columns = any(
+            k in message for k in [
+                "how many columns",
+                "number of columns",
+                "total columns",
+                "columns count",
+                "count columns",
+            ]
+        )
         asks_rows = any(k in message for k in ["how many rows", "number of rows", "total rows", "rows count"])
         asks_shape = any(k in message for k in ["shape", "dimensions", "dataset size"])
-        asks_headers = any(k in message for k in ["column names", "headers", "columns are", "list columns"])
+        asks_headers = any(
+            k in message for k in [
+                "column names",
+                "headers",
+                "columns are",
+                "list columns",
+                "list of columns",
+                "show columns",
+            ]
+        )
+
+        # General fallback for column-list intent phrased in many ways.
+        if not asks_headers and "column" in message and any(k in message for k in ["list", "show", "what are", "which"]):
+            asks_headers = True
 
         if asks_columns and isinstance(columns, int):
             return f"The dataset has {columns} columns."
