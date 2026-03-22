@@ -115,10 +115,8 @@ async def serve_robots():
 async def health_check():
     """Comprehensive health check with dependency status."""
     try:
-        from backend.services.rag import get_rag_service
-        
-        rag_service = get_rag_service()
-        rag_ready = rag_service.vectorstore is not None or rag_service._initialized
+        rag_index_exists = os.path.exists("backend/faiss_index")
+        rag_ready = rag_index_exists
         
         # Check dependencies
         dependencies = {

@@ -14,6 +14,7 @@ supabase>=2.0.0
 # ─── LLM (Groq only) ───
 groq>=0.4.0
 langchain-groq>=0.1.0
+langchain-google-genai>=1.0.0
 
 # ─── LangChain Agent ───
 langchain>=0.1.0,<0.2.0

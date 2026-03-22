@@ -22,6 +22,50 @@ MAX_OUTPUT_LENGTH = 5000
 python_repl_utility = PythonREPL()
 
 
+def run_python_code_fast(code: str) -> str:
+    """Run validated Python code and return normalized output for internal fast-path flows."""
+    if not code or not isinstance(code, str):
+        return "Error: Code must be a non-empty string"
+
+    code = code.strip()
+
+    dangerous_ops = [
+        "os.remove", "os.rmdir", "shutil.rmtree",
+        "subprocess.call", "subprocess.run", "__import__",
+        "eval(", "exec(", "compile(",
+        "requests.", "urllib.", "socket.",
+    ]
+
+    code_lower = code.lower()
+    for op in dangerous_ops:
+        if op in code_lower:
+            logger_tools.warning(f"Blocked dangerous operation: {op}")
+            return f"❌ Operation not allowed: {op}"
+
+    if len(code) > 10000:
+        return "❌ Code exceeds maximum length (10000 characters)"
+
+    try:
+        logger_tools.info("Executing Python code")
+        result = python_repl_utility.run(code)
+
+        if not result:
+            return "Code executed successfully (no output)"
+
+        if len(result) > MAX_OUTPUT_LENGTH:
+            result = result[:MAX_OUTPUT_LENGTH] + "\n... (output truncated)"
+
+        logger_tools.info(f"Python execution completed: {len(result)} chars")
+        return result
+    except TimeoutError:
+        logger_tools.error("Python execution timed out")
+        return f"⏱️ Code execution timed out (max {PYTHON_REPL_TIMEOUT} seconds)"
+    except Exception as e:
+        error_msg = str(e)[:200]
+        logger_tools.error(f"Python execution error: {error_msg}")
+        return f"❌ Execution error: {error_msg}"
+
+
 def timeout_handler(timeout_seconds: int):
     """Decorator to add timeout to async operations."""
     def decorator(func):
@@ -69,50 +113,7 @@ def python_repl(code: str) -> str:
     - Do NOT use plt.show()
     """
     
-    if not code or not isinstance(code, str):
-        return "Error: Code must be a non-empty string"
-    
-    code = code.strip()
-    
-    # Safety checks - block dangerous operations
-    dangerous_ops = [
-        "os.remove", "os.rmdir", "shutil.rmtree",  # File deletion
-        "subprocess.call", "subprocess.run", "__import__",  # Execution
-        "eval(", "exec(", "compile(",  # Code execution
-        "requests.", "urllib.", "socket.",  # Network operations
-    ]
-    
-    code_lower = code.lower()
-    for op in dangerous_ops:
-        if op in code_lower:
-            logger_tools.warning(f"Blocked dangerous operation: {op}")
-            return f"❌ Operation not allowed: {op}"
-    
-    # Size limit
-    if len(code) > 10000:
-        return "❌ Code exceeds maximum length (10000 characters)"
-    
-    try:
-        logger_tools.info("Executing Python code")
-        result = python_repl_utility.run(code)
-        
-        if not result:
-            return "Code executed successfully (no output)"
-        
-        # Truncate output if too long
-        if len(result) > MAX_OUTPUT_LENGTH:
-            result = result[:MAX_OUTPUT_LENGTH] + "\n... (output truncated)"
-        
-        logger_tools.info(f"Python execution completed: {len(result)} chars")
-        return result
-        
-    except TimeoutError:
-        logger_tools.error("Python execution timed out")
-        return f"⏱️ Code execution timed out (max {PYTHON_REPL_TIMEOUT} seconds)"
-    except Exception as e:
-        error_msg = str(e)[:200]
-        logger_tools.error(f"Python execution error: {error_msg}")
-        return f"❌ Execution error: {error_msg}"
+    return run_python_code_fast(code)
 
 
 @tool

@@ -1,7 +1,7 @@
 import logging
 from langchain_core.prompts import PromptTemplate
 from langchain.agents import create_react_agent, AgentExecutor
-from backend.services.tools import get_tools
+from backend.services.tools import get_tools, run_python_code_fast
 from backend.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -128,6 +128,135 @@ def _maybe_answer_from_file_context(user_message: str, file_context: dict | None
 
     return None
 
+
+def _maybe_run_csv_fast_analysis(user_message: str, file_context: dict | None) -> str | None:
+    """Run deterministic CSV analysis for common intents without going through ReAct."""
+    if not file_context or not isinstance(file_context, dict):
+        return None
+
+    if (file_context.get("file_type") or "").lower() != "csv":
+        return None
+
+    file_path = (file_context.get("file_path") or "").replace("\\", "/")
+    if not file_path:
+        return None
+
+    message = (user_message or "").strip().lower()
+    column_names = [str(c) for c in (file_context.get("column_names") or [])]
+
+    asks_distribution = any(k in message for k in ["distribution", "histogram", "dist"]) or (
+        "target" in message and "column" in message
+    )
+    if not asks_distribution:
+        return None
+
+    selected_col = None
+    for col in column_names:
+        if col.lower() in message:
+            selected_col = col
+            break
+
+    if selected_col is None and "target" in message:
+        if "selling_price" in column_names:
+            selected_col = "selling_price"
+        elif column_names:
+            selected_col = column_names[-1]
+
+    if selected_col:
+        code = (
+            "import pandas as pd\n"
+            f"df = pd.read_csv(r'''{file_path}''')\n"
+            f"col = r'''{selected_col}'''\n"
+            "if col not in df.columns:\n"
+            "    print(f'Column not found: {col}')\n"
+            "else:\n"
+            "    s = df[col]\n"
+            "    print(f'## Distribution for {col}')\n"
+            "    print(f'Count: {int(s.count())}')\n"
+            "    print(f'Nulls: {int(s.isna().sum())}')\n"
+            "    if pd.api.types.is_numeric_dtype(s):\n"
+            "        print(s.describe(percentiles=[0.25, 0.5, 0.75]).to_string())\n"
+            "    else:\n"
+            "        print(s.value_counts(dropna=False).head(20).to_string())\n"
+        )
+        return run_python_code_fast(code)
+
+    code = (
+        "import pandas as pd\n"
+        f"df = pd.read_csv(r'''{file_path}''')\n"
+        "summary = []\n"
+        "for col in df.columns:\n"
+        "    s = df[col]\n"
+        "    if pd.api.types.is_numeric_dtype(s):\n"
+        "        d = s.describe()\n"
+        "        summary.append(f'{col}: mean={d.get(\"mean\", \"n/a\")}, min={d.get(\"min\", \"n/a\")}, max={d.get(\"max\", \"n/a\")}, nulls={int(s.isna().sum())}')\n"
+        "    else:\n"
+        "        top = s.value_counts(dropna=False).head(1)\n"
+        "        top_label = top.index[0] if len(top.index) else 'n/a'\n"
+        "        top_count = int(top.iloc[0]) if len(top.values) else 0\n"
+        "        summary.append(f'{col}: top={top_label} ({top_count}), nulls={int(s.isna().sum())}')\n"
+        "print('## Column distribution summary')\n"
+        "print('\\n'.join(summary))\n"
+    )
+    return run_python_code_fast(code)
+
+
+def _build_llm_candidates(settings):
+    """Build provider candidates in priority order based on settings."""
+    provider = (settings.LLM_PROVIDER or "auto").strip().lower()
+    candidates = []
+
+    def add_gemini():
+        if not settings.GEMINI_API_KEY:
+            return
+        try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+
+            candidates.append(
+                (
+                    "gemini",
+                    ChatGoogleGenerativeAI(
+                        model=settings.GEMINI_MODEL,
+                        google_api_key=settings.GEMINI_API_KEY,
+                        temperature=0.2,
+                    ),
+                )
+            )
+        except Exception as exc:
+            logger.warning(f"Gemini provider unavailable: {type(exc).__name__}")
+
+    def add_groq():
+        if not settings.GROQ_API_KEY:
+            return
+        try:
+            from langchain_groq import ChatGroq
+
+            candidates.append(
+                (
+                    "groq",
+                    ChatGroq(
+                        model="llama-3.1-8b-instant",
+                        api_key=settings.GROQ_API_KEY,
+                        temperature=0.2,
+                    ),
+                )
+            )
+        except Exception as exc:
+            logger.warning(f"Groq provider unavailable: {type(exc).__name__}")
+
+    if provider == "gemini":
+        add_gemini()
+        add_groq()
+    elif provider == "groq":
+        add_groq()
+        add_gemini()
+    else:
+        # auto: prefer Gemini for speed/availability, then Groq.
+        add_gemini()
+        add_groq()
+
+    return candidates
+
 def run_agent(user_message: str, file_context: dict = None, chat_history: list = None) -> dict:
     """
     Core logic to handle user input, decide on tool usage, and generate a response.
@@ -138,15 +267,10 @@ def run_agent(user_message: str, file_context: dict = None, chat_history: list =
     deterministic_answer = _maybe_answer_from_file_context(user_message, file_context)
     if deterministic_answer:
         return {"reply": deterministic_answer, "steps": []}
-    
-    # Lazy import to prevent gRPC multi-processing deadlock on Windows Uvicorn '--reload' workers
-    from langchain_groq import ChatGroq
 
-    llm = ChatGroq(
-        model="llama-3.1-8b-instant",
-        api_key=settings.GROQ_API_KEY,
-        temperature=0.2,
-    )
+    fast_csv_answer = _maybe_run_csv_fast_analysis(user_message, file_context)
+    if fast_csv_answer:
+        return {"reply": fast_csv_answer, "steps": [{"tool": "python_repl", "input": "deterministic_fast_path", "output": "completed"}]}
 
     tools = get_tools()
     sys_prompt = _build_system_prompt(file_context)
@@ -185,42 +309,57 @@ Question: {input}
 Thought:{agent_scratchpad}"""
 
     prompt_template = PromptTemplate.from_template(react_template)
-    agent = create_react_agent(llm, tools, prompt_template)
-    agent_executor = AgentExecutor(
-        agent=agent,
-        tools=tools,
-        verbose=True,
-        handle_parsing_errors=True,
-        max_iterations=6,
-        max_execution_time=45,
-        handle_tool_error=True,
-        return_intermediate_steps=True,
-    )
+    llm_candidates = _build_llm_candidates(settings)
 
-    try:
-        response = agent_executor.invoke({"input": user_message})
-        output = response.get("output", "I could not generate a response.")
-        
-        raw_steps = response.get("intermediate_steps", [])
-        steps = []
-        for action, observation in raw_steps:
-            steps.append({
-                "tool": action.tool,
-                "input": getattr(action, "tool_input", str(action)),
-                "output": str(observation)
-            })
-            
-        return {"reply": _coerce_output_to_str(output), "steps": steps}
-    except Exception as e:
-        logger.exception("Agent execution failed")
-        error_text = str(e)
-        lowered = error_text.lower()
+    if not llm_candidates:
+        return {
+            "reply": "No LLM provider is configured. Set GEMINI_API_KEY or GROQ_API_KEY in your environment.",
+            "steps": [],
+        }
 
-        if "401" in lowered or "unauthorized" in lowered:
-            reply = "LLM provider authentication failed. Please verify GROQ_API_KEY and try again."
-        elif "iteration limit" in lowered or "time limit" in lowered:
-            reply = "I hit a reasoning limit for this request. Please rephrase with more specific details, or upload the file again for fresh context."
-        else:
-            reply = "There was an issue generating the response. Please try again."
+    last_error = None
+    for provider_name, llm in llm_candidates:
+        try:
+            agent = create_react_agent(llm, tools, prompt_template)
+            agent_executor = AgentExecutor(
+                agent=agent,
+                tools=tools,
+                verbose=True,
+                handle_parsing_errors=True,
+                max_iterations=5,
+                max_execution_time=35,
+                handle_tool_error=True,
+                return_intermediate_steps=True,
+            )
 
-        return {"reply": reply, "steps": []}
+            response = agent_executor.invoke({"input": user_message})
+            output = response.get("output", "I could not generate a response.")
+
+            raw_steps = response.get("intermediate_steps", [])
+            steps = []
+            for action, observation in raw_steps:
+                steps.append(
+                    {
+                        "tool": action.tool,
+                        "input": getattr(action, "tool_input", str(action)),
+                        "output": str(observation),
+                    }
+                )
+
+            return {"reply": _coerce_output_to_str(output), "steps": steps}
+        except Exception as exc:
+            last_error = exc
+            logger.warning(f"Provider {provider_name} failed, trying next provider: {type(exc).__name__}")
+
+    logger.exception("Agent execution failed", exc_info=last_error)
+    error_text = str(last_error) if last_error else "unknown_error"
+    lowered = error_text.lower()
+
+    if "401" in lowered or "unauthorized" in lowered:
+        reply = "LLM provider authentication failed. Please verify GEMINI_API_KEY or GROQ_API_KEY and try again."
+    elif "iteration limit" in lowered or "time limit" in lowered:
+        reply = "I hit a reasoning limit for this request. Please ask for a specific column distribution (for example, selling_price distribution)."
+    else:
+        reply = "There was an issue generating the response. Please try again."
+
+    return {"reply": reply, "steps": []}

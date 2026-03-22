@@ -11,6 +11,9 @@ class Settings(BaseSettings):
 
     # ── GROQ LLM ──────────────────────────────────────────
     GROQ_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    LLM_PROVIDER: str = "auto"  # auto | gemini | groq
 
     # ── Supabase Auth & Storage ─────────────────────────────
     SUPABASE_URL: str = ""
