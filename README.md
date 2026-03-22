@@ -612,6 +612,6 @@ This project is licensed under the MIT License.
 
 ## Author
 
-[OMCHOKSKI](https://github.com/OMCHOKSI108)
+[OMCHOKSI](https://github.com/OMCHOKSI108)
 
 Repository: https://github.com/OMCHOKSI108/DataScientistAgent

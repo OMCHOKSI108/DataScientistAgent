@@ -211,5 +211,5 @@ docker image prune -a
 
 ---
 
-**Author:** OMCHOKSKI  
-**Repository:** https://github.com/OMCHOKSKI108/agentic-rag-data-analyst
+**Author:** OMCHOKSI  
+**Repository:** https://github.com/OMCHOKSI108/agentic-rag-data-analyst

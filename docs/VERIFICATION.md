@@ -107,8 +107,8 @@
 ## Documentation Verification
 
 ### README.md ✅
-- ✅ Author info added: OMCHOKSKI
-- ✅ GitHub link added: OMCHOKSKI108
+- ✅ Author info added: OMCHOKSI
+- ✅ GitHub link added: OMCHOKSI108
 - ✅ Production enhancements documented
 - ✅ Quality metrics included
 - ✅ Feature list complete
@@ -299,6 +299,6 @@ This application is fully hardened, documented, and ready for production deploym
 ---
 
 **Date:** March 22, 2026  
-**Author:** OMCHOKSKI  
+**Author:** OMCHOKSI  
 **Repository:** https://github.com/OMCHOKSI108/agentic-rag-data-analyst  
 **Status:** ✅ VERIFIED & PRODUCTION READY
