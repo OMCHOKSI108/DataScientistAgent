@@ -1,0 +1,31 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv
+venv/
+env/
+ENV/
+
+# Repositories
+.git/
+.github/
+.gitignore
+
+# IDEs
+.vscode/
+.idea/
+
+# Dynamic application data (excluded for caching)
+uploads/
+frontend/graphs/
+logs/
+*.pdf
+*.csv
+
+# Model cache (download at build time)
+model_cache/
+
