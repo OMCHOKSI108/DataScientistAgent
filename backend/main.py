@@ -100,6 +100,8 @@ async def health_check():
         dependencies = {
             "rag_service": rag_ready,
             "uploads_dir": os.path.exists(settings.UPLOAD_DIR),
+            "groq_api": bool(settings.GROQ_API_KEY),
+            "supabase_config": bool(settings.SUPABASE_URL and settings.SUPABASE_KEY),
         }
         
         all_healthy = all(dependencies.values())
