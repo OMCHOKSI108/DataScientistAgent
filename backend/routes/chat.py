@@ -5,6 +5,7 @@ and returns the AI's reply.
 """
 
 import asyncio
+import threading
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
@@ -20,8 +21,13 @@ from backend.utils.validators import (
 from backend.logging_config import logger_chat, logger_db
 from supabase import create_client, ClientOptions
 from backend.config import get_settings
+from backend.middleware.rate_limiter import rate_limit_chat, rate_limit_global_ip
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+# Keeps latest uploaded file context per session for follow-up turns.
+_session_file_context: dict[str, dict] = {}
+_session_file_context_lock = threading.RLock()
 
 
 class ChatRequest(BaseModel):
@@ -71,6 +77,8 @@ def get_auth_data(request: Request) -> tuple:
     if not authorization or not authorization.startswith("Bearer "):
         logger_chat.warning("Missing or invalid authorization header")
         raise HTTPException(status_code=401, detail="Missing or invalid token")
+
+    rate_limit_global_ip(request)
     
     token = authorization.split(" ", 1)[1]
     
@@ -124,9 +132,10 @@ async def generate_title_async(sb, session_id: str, user_msg: str, user_id: str)
 
 
 @router.get("/sessions", response_model=SessionsResponse)
-async def get_chat_sessions(auth_data: tuple = Depends(get_auth_data)):
+async def get_chat_sessions(request: Request, auth_data: tuple = Depends(get_auth_data)):
     """Fetch all active chat sessions sorted by newest."""
     sb, user_id = auth_data
+    rate_limit_chat(request, user_id)
     try:
         res = (
             sb.table("chat_sessions")
@@ -147,6 +156,7 @@ async def get_chat_sessions(auth_data: tuple = Depends(get_auth_data)):
 
 @router.get("/history", response_model=ChatHistoryResponse)
 async def get_chat_history(
+    request: Request,
     session_id: str,
     limit: int = 50,
     offset: int = 0,
@@ -154,6 +164,7 @@ async def get_chat_history(
 ):
     """Paginated load of historical chat messages for a session."""
     sb, user_id = auth_data
+    rate_limit_chat(request, user_id)
     try:
         # Validate session_id format
         try:
@@ -201,9 +212,14 @@ async def get_chat_history(
 
 
 @router.post("", response_model=ChatResponse)
-async def chat_endpoint(payload: ChatRequest, auth_data: tuple = Depends(get_auth_data)):
+async def chat_endpoint(
+    request: Request,
+    payload: ChatRequest,
+    auth_data: tuple = Depends(get_auth_data),
+):
     """Process user message and return AI response."""
     sb, user_id = auth_data
+    rate_limit_chat(request, user_id)
 
     # Validate input
     try:
@@ -263,6 +279,15 @@ async def chat_endpoint(payload: ChatRequest, auth_data: tuple = Depends(get_aut
                 logger_db.error(f"Session check failed: {e}")
                 raise HTTPException(status_code=500, detail="Session lookup failed")
 
+        if payload.file_context and isinstance(payload.file_context, dict):
+            with _session_file_context_lock:
+                _session_file_context[session_id] = payload.file_context
+
+        effective_file_context = payload.file_context
+        if not effective_file_context:
+            with _session_file_context_lock:
+                effective_file_context = _session_file_context.get(session_id)
+
         # Fetch chat history for context
         try:
             history_res = (
@@ -304,7 +329,7 @@ async def chat_endpoint(payload: ChatRequest, auth_data: tuple = Depends(get_aut
         steps = []
         try:
             agent_result = run_agent(
-                user_msg, file_context=payload.file_context, chat_history=chat_history
+                user_msg, file_context=effective_file_context, chat_history=chat_history
             )
             ai_reply_text = agent_result.get("reply", "")
             steps = agent_result.get("steps", [])
@@ -352,10 +377,13 @@ async def chat_endpoint(payload: ChatRequest, auth_data: tuple = Depends(get_aut
 
 @router.delete("/sessions/{session_id}")
 async def delete_session(
-    session_id: str, auth_data: tuple = Depends(get_auth_data)
+    request: Request,
+    session_id: str,
+    auth_data: tuple = Depends(get_auth_data),
 ):
     """Soft delete a chat session."""
     sb, user_id = auth_data
+    rate_limit_chat(request, user_id)
 
     # Validate session_id format
     try:
@@ -375,6 +403,9 @@ async def delete_session(
         if not result.data:
             logger_chat.warning(f"Delete session not found: {session_id}")
             raise HTTPException(status_code=404, detail="Session not found")
+
+        with _session_file_context_lock:
+            _session_file_context.pop(session_id, None)
         
         logger_chat.info(f"Session deleted: {session_id}")
         return {"message": "Session securely deleted"}
@@ -387,10 +418,14 @@ async def delete_session(
 
 @router.put("/sessions/{session_id}")
 async def rename_session(
-    session_id: str, payload: RenameRequest, auth_data: tuple = Depends(get_auth_data)
+    request: Request,
+    session_id: str,
+    payload: RenameRequest,
+    auth_data: tuple = Depends(get_auth_data),
 ):
     """Rename a chat session."""
     sb, user_id = auth_data
+    rate_limit_chat(request, user_id)
 
     # Validate inputs
     try:

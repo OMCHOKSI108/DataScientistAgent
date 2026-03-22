@@ -34,6 +34,7 @@ from backend.middleware.request_tracking import RequestTrackingMiddleware
 from backend.routes.auth import router as auth_router
 from backend.routes.upload import router as upload_router
 from backend.routes.chat import router as chat_router
+from backend.routes.chat_streaming import router as chat_streaming_router
 
 # Initialize logging
 setup_logging()
@@ -55,12 +56,7 @@ app.add_middleware(CacheMiddleware)
 # ── CORS (restrictive for security) ─────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:3000",  # For development
-        "https://your-domain.com",  # Replace with your actual domain
-    ],
+    allow_origins=[origin.strip() for origin in settings.CORS_ALLOW_ORIGINS.split(",") if origin.strip()],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -71,6 +67,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(upload_router)
 app.include_router(chat_router)
+app.include_router(chat_streaming_router)
 
 
 # ── Config endpoint ───────────────────────────────────

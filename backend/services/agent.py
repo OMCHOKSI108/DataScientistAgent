@@ -55,12 +55,55 @@ def _coerce_output_to_str(output) -> str:
         return str(output.get("output", output))
     return str(output)
 
+
+def _maybe_answer_from_file_context(user_message: str, file_context: dict | None) -> str | None:
+    """Return a deterministic answer for common metadata questions about uploaded files."""
+    if not file_context or not isinstance(file_context, dict):
+        return None
+
+    message = (user_message or "").strip().lower()
+    file_type = (file_context.get("file_type") or "").lower()
+
+    if file_type == "csv":
+        rows = file_context.get("rows")
+        columns = file_context.get("columns")
+        column_names = file_context.get("column_names") or []
+
+        asks_columns = any(k in message for k in ["how many columns", "number of columns", "total columns", "columns count"])
+        asks_rows = any(k in message for k in ["how many rows", "number of rows", "total rows", "rows count"])
+        asks_shape = any(k in message for k in ["shape", "dimensions", "dataset size"])
+        asks_headers = any(k in message for k in ["column names", "headers", "columns are", "list columns"])
+
+        if asks_columns and isinstance(columns, int):
+            return f"The dataset has {columns} columns."
+
+        if asks_rows and isinstance(rows, int):
+            return f"The dataset has {rows} rows."
+
+        if asks_shape and isinstance(rows, int) and isinstance(columns, int):
+            return f"The dataset shape is {rows} rows x {columns} columns."
+
+        if asks_headers and column_names:
+            return "Columns:\n- " + "\n- ".join(str(name) for name in column_names)
+
+    if file_type == "pdf":
+        asks_page_count = any(k in message for k in ["how many pages", "page count", "total pages"])
+        pages = file_context.get("total_pages")
+        if asks_page_count and isinstance(pages, int):
+            return f"The PDF has {pages} pages."
+
+    return None
+
 def run_agent(user_message: str, file_context: dict = None, chat_history: list = None) -> dict:
     """
     Core logic to handle user input, decide on tool usage, and generate a response.
     Now receives `chat_history` from the database.
     """
     settings = get_settings()
+
+    deterministic_answer = _maybe_answer_from_file_context(user_message, file_context)
+    if deterministic_answer:
+        return {"reply": deterministic_answer, "steps": []}
     
     # Lazy import to prevent gRPC multi-processing deadlock on Windows Uvicorn '--reload' workers
     from langchain_groq import ChatGroq
@@ -114,7 +157,8 @@ Thought:{agent_scratchpad}"""
         tools=tools,
         verbose=True,
         handle_parsing_errors=True,
-        max_iterations=10,
+        max_iterations=6,
+        max_execution_time=45,
         handle_tool_error=True,
         return_intermediate_steps=True,
     )
@@ -135,4 +179,14 @@ Thought:{agent_scratchpad}"""
         return {"reply": _coerce_output_to_str(output), "steps": steps}
     except Exception as e:
         logger.exception("Agent execution failed")
-        return {"reply": f"Agent Error: {str(e)}", "steps": []}
+        error_text = str(e)
+        lowered = error_text.lower()
+
+        if "401" in lowered or "unauthorized" in lowered:
+            reply = "LLM provider authentication failed. Please verify GROQ_API_KEY and try again."
+        elif "iteration limit" in lowered or "time limit" in lowered:
+            reply = "I hit a reasoning limit for this request. Please rephrase with more specific details, or upload the file again for fresh context."
+        else:
+            reply = "There was an issue generating the response. Please try again."
+
+        return {"reply": reply, "steps": []}

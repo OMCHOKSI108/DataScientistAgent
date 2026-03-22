@@ -14,8 +14,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!res.ok) throw new Error("Could not load backend config");
         SUPABASE_CONFIG = await res.json();
 
-        if (!SUPABASE_CONFIG.supabase_url || !SUPABASE_CONFIG.supabase_key) {
-            showAlert("Supabase URL or Key is not configured on the backend.");
+        if (!SUPABASE_CONFIG.supabase_url) {
+            showAlert("Supabase URL is not configured on the backend.");
         }
     } catch (err) {
         showAlert(err.message);

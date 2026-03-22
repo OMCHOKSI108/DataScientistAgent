@@ -5,7 +5,7 @@ Allows real-time streaming of agent responses to the client.
 
 import asyncio
 import json
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
@@ -15,6 +15,7 @@ from backend.services.agent import run_agent
 from backend.utils.validators import validate_message, ValidationError
 from backend.logging_config import logger_chat
 from backend.routes.chat import get_auth_data
+from backend.middleware.rate_limiter import rate_limit_chat
 
 router = APIRouter(prefix="/api/chat/stream", tags=["chat"])
 
@@ -72,6 +73,7 @@ async def generate_streaming_response(
 
 @router.post("/chat_stream")
 async def chat_stream(
+    request: Request,
     payload: ChatStreamRequest,
     auth_data: tuple = Depends(get_auth_data),
 ):
@@ -85,6 +87,7 @@ async def chat_stream(
     - error: Error occurred
     """
     sb, user_id = auth_data
+    rate_limit_chat(request, user_id)
 
     # Validate input
     try:

@@ -344,6 +344,7 @@ function addMessageSilent(content, role = "user") {
     `;
     messagesArea.appendChild(msgEl);
     messagesArea.scrollTop = messagesArea.scrollHeight;
+    addDownloadButtons(msgEl);
 }
 
 function addMessage(content, role = "user", steps = []) {
@@ -371,6 +372,7 @@ function addMessage(content, role = "user", steps = []) {
 
     messagesArea.appendChild(msgEl);
     messagesArea.scrollTop = messagesArea.scrollHeight;
+    addDownloadButtons(msgEl);
 }
 
 function showTypingIndicator() {
@@ -638,6 +640,42 @@ function showAlert(message, type = "error") {
             alert.remove();
         }
     }, 5000);
+}
+
+/**
+ * Add download buttons to images in the message.
+ */
+function addDownloadButtons(msgEl) {
+    const images = msgEl.querySelectorAll('img');
+    images.forEach(img => {
+        if (img.parentElement.querySelector('.download-btn')) return;
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'image-wrapper';
+        wrapper.style.position = 'relative';
+        wrapper.style.display = 'inline-block';
+        
+        img.parentNode.insertBefore(wrapper, img);
+        wrapper.appendChild(img);
+        
+        const downloadBtn = document.createElement('a');
+        downloadBtn.className = 'download-btn';
+        downloadBtn.href = img.src;
+        downloadBtn.download = img.src.split('/').pop() || 'graph.png';
+        downloadBtn.textContent = '💾 Download';
+        downloadBtn.style.cssText = `
+            display: inline-block;
+            margin-top: 8px;
+            padding: 6px 12px;
+            background: #4f46e5;
+            color: white;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            font-family: Inter, sans-serif;
+        `;
+        wrapper.appendChild(downloadBtn);
+    });
 }
 
 /**

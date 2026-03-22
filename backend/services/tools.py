@@ -65,7 +65,7 @@ def python_repl(code: str) -> str:
     
     Usage:
     - To analyze a CSV: df = pd.read_csv(filepath)
-    - To create plots: plt.savefig('frontend/graphs/name.png'); print('![Graph](/graphs/name.png)')
+    - To create plots: plt.savefig('frontend/graphs/name.png'); print('![Graph](/static/graphs/name.png) [Download](/static/graphs/name.png)')
     - Do NOT use plt.show()
     """
     
@@ -79,7 +79,7 @@ def python_repl(code: str) -> str:
         "os.remove", "os.rmdir", "shutil.rmtree",  # File deletion
         "subprocess.call", "subprocess.run", "__import__",  # Execution
         "eval(", "exec(", "compile(",  # Code execution
-        "open(", "requests.", "urllib.", "socket.",  # Network/file I/O
+        "requests.", "urllib.", "socket.",  # Network operations
     ]
     
     code_lower = code.lower()

@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     # ── App ─────────────────────────────────────────────────
     APP_TITLE: str = "Autonomous Data Scientist Agent"
     UPLOAD_DIR: str = "uploads"
+    CORS_ALLOW_ORIGINS: str = "http://localhost:8080,http://127.0.0.1:8080,http://localhost:3000"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

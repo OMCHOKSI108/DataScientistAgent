@@ -2,9 +2,10 @@
 Authentication routes – signup, login, logout via Supabase Auth.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 from backend.services.supabase_client import get_supabase_client
+from backend.middleware.rate_limiter import rate_limit_auth, rate_limit_global_ip
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -28,9 +29,11 @@ class AuthResponse(BaseModel):
 # ── Endpoints ───────────────────────────────────────────────
 
 @router.post("/signup", response_model=AuthResponse)
-async def signup(payload: AuthRequest):
+async def signup(request: Request, payload: AuthRequest):
     """Register a new user with Supabase Auth."""
     try:
+        rate_limit_global_ip(request)
+        rate_limit_auth(request)
         sb = get_supabase_client()
         result = sb.auth.sign_up({
             "email": payload.email,
@@ -47,14 +50,18 @@ async def signup(payload: AuthRequest):
             user_id=str(user.id) if user else None,
             email=payload.email,
         )
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=400, detail="Signup failed")
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(payload: AuthRequest):
+async def login(request: Request, payload: AuthRequest):
     """Authenticate an existing user and return an access token."""
     try:
+        rate_limit_global_ip(request)
+        rate_limit_auth(request)
         sb = get_supabase_client()
         result = sb.auth.sign_in_with_password({
             "email": payload.email,
@@ -70,8 +77,10 @@ async def login(payload: AuthRequest):
             user_id=str(user.id) if user else None,
             email=payload.email,
         )
-    except Exception as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=401, detail="Login failed")
 
 
 @router.post("/logout")

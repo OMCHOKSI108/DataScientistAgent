@@ -16,6 +16,7 @@ from backend.utils.validators import (
     ValidationError,
 )
 from backend.logging_config import logger_upload
+from backend.middleware.rate_limiter import rate_limit_global_ip, rate_limit_upload
 from supabase import create_client, ClientOptions
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
@@ -30,6 +31,8 @@ def get_auth_data(request: Request) -> tuple:
     authorization = request.headers.get("Authorization")
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid token")
+
+    rate_limit_global_ip(request)
     
     token = authorization.split(" ", 1)[1]
     settings = get_settings()
@@ -79,6 +82,7 @@ def generate_safe_filename(original_filename: str, file_hash: str) -> str:
 
 @router.post("")
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
     auth_data: tuple = Depends(get_auth_data),
 ):
@@ -90,6 +94,7 @@ async def upload_file(
     - Parses and indexes the file
     """
     user_id = auth_data[1]
+    rate_limit_upload(request, user_id)
     
     # Validate filename extension
     ext = Path(file.filename).suffix.lower()
@@ -200,12 +205,13 @@ async def upload_file(
 
 
 @router.get("/files")
-async def list_uploaded_files(auth_data: tuple = Depends(get_auth_data)):
+async def list_uploaded_files(request: Request, auth_data: tuple = Depends(get_auth_data)):
     """
     List all uploaded files in the uploads directory.
     Returns file metadata without exposing full system paths.
     """
     user_id = auth_data[1]
+    rate_limit_upload(request, user_id)
     settings = get_settings()
     upload_dir = Path(settings.UPLOAD_DIR)
     
