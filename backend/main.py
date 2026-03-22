@@ -37,13 +37,19 @@ app = FastAPI(
 # Add request tracking middleware (should be added last for proper ordering)
 app.add_middleware(RequestTrackingMiddleware)
 
-# ── CORS (allow frontend during development) ───────────────
+# ── CORS (restrictive for security) ─────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:3000",  # For development
+        "https://your-domain.com",  # Replace with your actual domain
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    max_age=86400,  # 24 hours
 )
 
 # ── API Routers ─────────────────────────────────────────────
