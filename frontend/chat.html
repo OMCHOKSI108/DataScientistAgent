@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Autonomous Data Scientist Agent – Chat with AI to analyze datasets, generate code, search the web, and get intelligent insights.">
+    <title>Chat – AI Data Scientist Agent</title>
+    <link rel="stylesheet" href="/static/css/sidebar.css?v=3">
+    <link rel="stylesheet" href="/static/css/styles.css?v=3">
+</head>
+<body>
+    <div class="bg-animated"></div>
+
+    <div class="chat-wrapper">
+        <!-- ── Sidebar ───────────────────────────────────── -->
+        <aside class="sidebar" id="sidebar" role="complementary" aria-label="Chat history and user menu">
+            <div class="sidebar-header">
+                <h2>🧠 AI Agent</h2>
+                <button class="btn-new-chat" id="newChatBtn" aria-label="Start new chat">+ New Chat</button>
+            </div>
+
+            <div class="chat-history" id="chatHistory" role="list" aria-label="Chat conversations">
+                <div class="chat-history-empty">
+                    No conversations yet.<br>Start a new chat!
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar" aria-hidden="true">U</div>
+                    <span class="user-email" id="userEmail" aria-label="Current user email"></span>
+                </div>
+                <button class="btn-logout" id="logoutBtn" aria-label="Sign out">Sign Out</button>
+            </div>
+        </aside>
+
+        <!-- ── Sidebar Overlay (mobile) ──────────────────── -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <!-- ── Main Panel ────────────────────────────────── -->
+        <main class="main-panel" role="main">
+            <!-- Top Bar -->
+            <header class="main-header">
+                <button class="hamburger" id="hamburgerBtn" aria-label="Toggle sidebar menu">☰</button>
+                <h3>Autonomous Data Scientist</h3>
+            </header>
+
+            <!-- Messages Area -->
+            <div class="messages-area" id="messagesArea" role="log" aria-label="Chat messages" aria-live="polite">
+                <!-- Welcome State (shown when no messages) -->
+                <div class="welcome-state" id="welcomeState">
+                    <div class="icon">🤖</div>
+                    <h2>How can I help you today?</h2>
+                    <p>Upload datasets, ask questions, analyze data, generate code, or search the web for real-time insights.</p>
+
+                    <div class="capabilities">
+                        <div class="capability-card">
+                            <div class="cap-icon">📊</div>
+                            <h4>Data Analysis</h4>
+                            <p>Analyze CSV files with auto-generated Python code</p>
+                        </div>
+                        <div class="capability-card">
+                            <div class="cap-icon">📄</div>
+                            <h4>Document Q&A</h4>
+                            <p>Ask questions about uploaded PDFs using RAG</p>
+                        </div>
+                        <div class="capability-card">
+                            <div class="cap-icon">🌐</div>
+                            <h4>Web Search</h4>
+                            <p>Fetch real-time information from the internet</p>
+                        </div>
+                        <div class="capability-card">
+                            <div class="cap-icon">🐍</div>
+                            <h4>Code Execution</h4>
+                            <p>Generate &amp; run Python with auto error-fixing</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <div id="stagedFileContainer" class="staged-file-container" style="display: none;">
+                    <div class="file-icon" id="fileIcon">📄</div>
+                    <div class="file-details">
+                        <div class="file-name" id="stagedFileName">filename.pdf</div>
+                        <div class="file-meta" id="fileMeta">Document • 0 KB</div>
+                    </div>
+                    <button id="removeStagedFileBtn" class="btn-remove-file" title="Remove attachment">✖</button>
+                </div>
+                <div class="input-wrapper">
+                    <button class="file-upload-btn" id="fileUploadBtn" title="Upload CSV or PDF" aria-label="Upload file">
+                        📎
+                    </button>
+                    <textarea
+                        id="chatInput"
+                        placeholder="Ask anything about your data..."
+                        rows="1"
+                        aria-label="Type your message here"
+                    ></textarea>
+                    <button class="btn-send" id="sendBtn" title="Send message" aria-label="Send message">
+                        ➤
+                    </button>
+                </div>
+                <input type="file" id="fileInput" accept=".csv,.pdf" style="display:none" aria-hidden="true">
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/static/js/app.js?v=8"></script>
+</body>
+</html>

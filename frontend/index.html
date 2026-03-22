@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Login to the Autonomous Data Scientist Agent – AI-powered data analysis, RAG, and web intelligence.">
+    <title>Login – AI Data Scientist Agent</title>
+    <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+    <div class="bg-animated"></div>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <!-- Logo -->
+            <div class="logo">
+                <h1>🧠 AI Data Scientist</h1>
+                <p>Autonomous Agent · RAG · Web Intelligence</p>
+            </div>
+
+            <!-- Alert -->
+            <div id="alert" class="alert"></div>
+
+            <!-- Login Form -->
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="you@example.com"
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="••••••••"
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="loginBtn">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                Don't have an account? <a href="/signup.html">Create one</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/auth.js"></script>
+</body>
+</html>
