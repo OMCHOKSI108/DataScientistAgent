@@ -46,9 +46,9 @@ Create `.env` in the project root:
 GROQ_API_KEY=your-groq-api-key
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your-anon-key
-SECRET_KEY=your-secret-jwt-key
-LOG_LEVEL=INFO
 ```
+
+> **Note:** The SECRET_KEY and LOG_LEVEL are optional and have sensible defaults.
 
 ## Docker Details
 
