@@ -1,0 +1,39 @@
+# ─── Environment ───
+.env
+*.env
+
+# ─── Python ───
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ─── Virtual Envs ───
+venv/
+.venv/
+env/
+
+# ─── Uploads & Data ───
+uploads/*
+!uploads/.gitkeep
+*.faiss
+faiss_index/
+
+# ─── IDE ───
+.vscode/
+.idea/
+
+# ─── OS ───
+.DS_Store
+Thumbs.db
+
+# ─── Generated ───
+*.png
+*.jpg
+*.jpeg
+charts/
+
+
+.env.example
