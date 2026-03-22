@@ -5,13 +5,17 @@ A production-grade, containerized AI agent built to autonomously query datasets,
 This repository leverages the **GROQ Llama 3.1** reasoning engine under the hood, orchestrated entirely by LangChain and integrated flawlessly with a fast, modern glassmorphism Chat UI powered dynamically by FastAPI.
 
 **Author:** [OMCHOKSKI](https://github.com/OMCHOKSI108)
-**Repository:** https://github.com/OMCHOKSKI108/agentic-rag-data-analyst
+**Repository:** https://github.com/OMCHOKSI108/DataScientistAgent
 
 ## 🌟 Core Features
 - **Code Execution:** The AI can natively execute data-analysis Python scripts (using `pandas` and `matplotlib`) and securely render resultant data visualizations directly inside the unified chat thread.
 - **RAG Architecture:** Upload PDF files securely. The backend utilizes `FAISS` to parse text chunks and semantically query the vector index when you ask technical or specific document-related questions.
 - **Live Search:** Bound to a DuckDuckGo search agent engine, ensuring the AI can retrieve real-time world knowledge simultaneously with code iteration.
 - **Persistent AI Memory:** Fully synchronized with **Supabase PostgreSQL**. Sessions are safely archived, horizontally stored by UUID context, grouped historically chronologically, and heavily optimized to reduce Google API context-window overload.
+- **File Upload Support:** Support for CSV and PDF file uploads with automatic processing
+- **Real-time Chat:** Streaming responses with modern chat interface
+- **Authentication:** Secure user authentication via Supabase Auth
+- **Docker Deployment:** Containerized deployment with optimized Docker setup
 
 ## 🚀 Native Installation
 
