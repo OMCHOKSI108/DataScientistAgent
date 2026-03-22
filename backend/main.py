@@ -107,6 +107,12 @@ async def serve_chat():
     return FileResponse(str(frontend_dir / "chat.html"))
 
 
+@app.get("/robots.txt")
+async def serve_robots():
+    """Serve robots.txt for SEO."""
+    return FileResponse(str(frontend_dir / "robots.txt"), media_type="text/plain")
+
+
 # ── Health check with dependency status ─────────────────────
 @app.get("/api/health")
 async def health_check():
