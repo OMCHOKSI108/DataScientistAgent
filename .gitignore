@@ -9,15 +9,33 @@ __pycache__/
 dist/
 build/
 *.egg
+.pytest_cache/
 
 # ─── Virtual Envs ───
 venv/
 .venv/
 env/
 
+# ─── IDEs ───
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── OS ───
+.DS_Store
+Thumbs.db
+
 # ─── Uploads & Data ───
 uploads/*
 !uploads/.gitkeep
+
+# ─── Logs ───
+*.log
+logs/
+
+# ─── Docker ───
+.dockerignore
 *.faiss
 faiss_index/
 
