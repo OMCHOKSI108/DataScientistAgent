@@ -22,7 +22,7 @@ from supabase import create_client, ClientOptions
 router = APIRouter(prefix="/api/upload", tags=["upload"])
 
 # Allowed file extensions
-ALLOWED_EXTENSIONS = {".csv", ".pdf"}
+ALLOWED_EXTENSIONS = {".csv", ".pdf", ".txt", ".parquet"}
 MAX_FILE_SIZE_MB = 50
 
 
@@ -160,6 +160,12 @@ async def upload_file(
                 parse_result = load_csv(save_path)
             elif ext == ".pdf":
                 parse_result = load_pdf(save_path)
+            elif ext == ".txt":
+                from backend.services.txt_loader import load_txt
+                parse_result = load_txt(save_path)
+            elif ext == ".parquet":
+                from backend.services.parquet_loader import load_parquet
+                parse_result = load_parquet(save_path)
             else:
                 raise ValueError(f"Unsupported file type: {ext}")
             

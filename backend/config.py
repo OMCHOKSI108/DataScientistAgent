@@ -9,11 +9,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Application settings loaded from .env file."""
 
-    # ── GROQ LLM ──────────────────────────────────────────
+    # ── GROQ & OpenRouter LLMs ────────────────────────────
+    OPENROUTER_API_KEY: str = ""
     GROQ_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
-    LLM_PROVIDER: str = "auto"  # auto | gemini | groq
+    LLM_PROVIDER: str = "openrouter"  # openrouter | auto | gemini | groq
 
     # ── Supabase Auth & Storage ─────────────────────────────
     SUPABASE_URL: str = ""

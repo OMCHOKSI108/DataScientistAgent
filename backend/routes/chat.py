@@ -108,12 +108,19 @@ async def generate_title_async(sb, session_id: str, user_msg: str, user_id: str)
     Uses Groq Llama for title generation (free tier available).
     """
     try:
-        from langchain_groq import ChatGroq
-
+        from langchain_openai import ChatOpenAI
+        
         settings = get_settings()
-        llm = ChatGroq(
-            model="llama-3.1-8b-instant",
-            api_key=settings.GROQ_API_KEY,
+        if not settings.OPENROUTER_API_KEY:
+            # Fallback to simple title if no key
+            title = user_msg[:30].strip() + ("..." if len(user_msg) > 30 else "")
+            sb.table("chat_sessions").update({"title": title}).eq("id", session_id).eq("user_id", user_id).execute()
+            return
+            
+        llm = ChatOpenAI(
+            model="meta-llama/llama-3.1-8b-instruct",
+            api_key=settings.OPENROUTER_API_KEY,
+            base_url="https://openrouter.ai/api/v1",
             temperature=0.3,
         )
         title = (

@@ -175,13 +175,21 @@ async def generate_title_async(
         )
 
     try:
-        from langchain_groq import ChatGroq
+        from langchain_openai import ChatOpenAI
         from backend.config import get_settings
 
         settings = get_settings()
-        llm = ChatGroq(
-            model="llama-3.1-8b-instant",
-            api_key=settings.GROQ_API_KEY,
+        
+        if not settings.OPENROUTER_API_KEY:
+            # Fallback
+            title = user_msg[:30].strip() + ("..." if len(user_msg) > 30 else "")
+            sb.table("chat_sessions").update({"title": title}).eq("id", session_id).eq("user_id", user_id).execute()
+            return f"Generated simple title: {title}"
+
+        llm = ChatOpenAI(
+            model="anthropic/claude-3.5-sonnet",
+            api_key=settings.OPENROUTER_API_KEY,
+            base_url="https://openrouter.ai/api/v1",
             temperature=0.3,
         )
 

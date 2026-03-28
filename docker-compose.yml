@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: datascientistagent-backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./uploads:/app/uploads
+      - ./backend/faiss_index:/app/backend/faiss_index
+    networks:
+      - ds-network
+
+  frontend:
+    build:
+      context: ./frontend_react
+      dockerfile: Dockerfile
+    container_name: datascientistagent-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - ds-network
+
+networks:
+  ds-network:
+    driver: bridge

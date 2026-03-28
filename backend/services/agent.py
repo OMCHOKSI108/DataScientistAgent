@@ -244,14 +244,41 @@ def _build_llm_candidates(settings):
         except Exception as exc:
             logger.warning(f"Groq provider unavailable: {type(exc).__name__}")
 
-    if provider == "gemini":
+    def add_openrouter():
+        if not settings.OPENROUTER_API_KEY:
+            return
+        try:
+            from langchain_openai import ChatOpenAI
+
+            candidates.append(
+                (
+                    "openrouter",
+                    ChatOpenAI(
+                        model="anthropic/claude-3.5-sonnet",
+                        api_key=settings.OPENROUTER_API_KEY,
+                        base_url="https://openrouter.ai/api/v1",
+                        temperature=0.2,
+                    ),
+                )
+            )
+        except Exception as exc:
+            logger.warning(f"OpenRouter provider unavailable: {type(exc).__name__}")
+
+    if provider == "openrouter":
+        add_openrouter()
         add_gemini()
+        add_groq()
+    elif provider == "gemini":
+        add_gemini()
+        add_openrouter()
         add_groq()
     elif provider == "groq":
         add_groq()
+        add_openrouter()
         add_gemini()
     else:
-        # auto: prefer Gemini for speed/availability, then Groq.
+        # auto: prefer OpenRouter first
+        add_openrouter()
         add_gemini()
         add_groq()
 

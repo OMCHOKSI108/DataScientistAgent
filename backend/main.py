@@ -14,6 +14,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from backend.config import get_settings
+from backend.logging_config import setup_logging
+from backend.middleware.request_tracking import RequestTrackingMiddleware
+from backend.routes.auth import router as auth_router
+from backend.routes.upload import router as upload_router
+from backend.routes.chat import router as chat_router
+from backend.routes.chat_streaming import router as chat_streaming_router
+from backend.routes.export import router as export_router
+
 
 class CacheMiddleware(BaseHTTPMiddleware):
     """Add cache headers for static assets."""
@@ -28,13 +37,7 @@ class CacheMiddleware(BaseHTTPMiddleware):
 
         return response
 
-from backend.config import get_settings
-from backend.logging_config import setup_logging
-from backend.middleware.request_tracking import RequestTrackingMiddleware
-from backend.routes.auth import router as auth_router
-from backend.routes.upload import router as upload_router
-from backend.routes.chat import router as chat_router
-from backend.routes.chat_streaming import router as chat_streaming_router
+
 
 # Initialize logging
 setup_logging()
@@ -68,6 +71,7 @@ app.include_router(auth_router)
 app.include_router(upload_router)
 app.include_router(chat_router)
 app.include_router(chat_streaming_router)
+app.include_router(export_router)
 
 
 # ── Config endpoint ───────────────────────────────────

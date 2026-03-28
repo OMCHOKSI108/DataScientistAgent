@@ -11,7 +11,8 @@ email-validator>=2.0.0
 # ─── Auth & Storage ───
 supabase>=2.0.0
 
-# ─── LLM (Groq only) ───
+# ─── LLM Integrations ───
+langchain-openai>=0.1.0
 groq>=0.4.0
 langchain-groq>=0.1.0
 langchain-google-genai>=1.0.0
@@ -30,7 +31,9 @@ faiss-cpu>=1.7.0
 
 # ─── Data & Viz ───
 pandas>=2.0.0
+pyarrow>=14.0.0
 matplotlib>=3.7.0
+nbformat>=5.0.0
 
 # ─── Web Search ───
 duckduckgo-search>=5.0.0
